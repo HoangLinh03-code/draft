@@ -1,0 +1,386 @@
+/* =========================================
+   1. GLOBAL VARIABLES & RESET
+   Bảng màu chuẩn Nobook Dark Mode
+========================================= */
+:root {
+    --bg-header: #33373d;       /* Màu nền Header */
+    --bg-sidebar: #2c3036;      /* Màu nền Sidebar */
+    --bg-canvas: #43474d;       /* Màu nền vùng làm việc */
+    --bg-item: #3b3e45;         /* Màu nền ô dụng cụ */
+    --text-primary: #ffffff;
+    --text-secondary: #aaaaaa;
+    --accent-blue: #409eff;     /* Màu xanh điểm nhấn */
+    --border-dark: #1f2124;
+    
+    /* Màu mới cho chất lỏng */
+    --liquid-color: rgba(0, 191, 255, 0.5); 
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; 
+    color: var(--text-primary);
+    user-select: none;
+}
+
+/* =========================================
+   2. HEADER STYLES
+========================================= */
+#main-header {
+    height: 50px;
+    background-color: var(--bg-header);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 15px;
+    border-bottom: 1px solid var(--border-dark);
+    z-index: 100;
+}
+
+.btn-tool, .btn-icon, .btn-demo {
+    background: none; border: none; color: var(--text-secondary);
+    cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; font-size: 11px; margin: 0 8px; transition: 0.2s;
+}
+.btn-tool i { font-size: 16px; margin-bottom: 2px; }
+.btn-tool:hover { color: var(--accent-blue); }
+
+.header-left { display: flex; align-items: center; }
+.divider { width: 1px; height: 30px; background: #555; margin: 0 10px; }
+.header-center { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+.header-right .btn-demo { background: #444; padding: 5px 10px; border-radius: 4px; flex-direction: row; gap: 5px; }
+
+/* =========================================
+   3. WORKSPACE LAYOUT
+========================================= */
+#workspace { display: flex; flex: 1; position: relative; }
+#canvas-area { flex: 1; background-color: var(--bg-canvas); position: relative; overflow: hidden; }
+
+/* Container chứa vật thể (Không set kích thước cứng, để nó là lớp phủ) */
+#simulation-container {
+    width: 100%; height: 100%;
+    position: absolute; top: 0; left: 0;
+}
+
+/* --- SIDEBAR --- */
+#library-sidebar {
+    width: 320px; background-color: var(--bg-sidebar);
+    border-left: 1px solid var(--border-dark);
+    display: flex; position: relative; z-index: 100;
+}
+.sidebar-tabs {
+    width: 50px; background-color: #25282d;
+    display: flex; flex-direction: column; align-items: center; padding-top: 10px;
+}
+.tab-item {
+    width: 100%; height: 50px; display: flex; justify-content: center; align-items: center;
+    color: #777; cursor: pointer; font-size: 18px;
+}
+.tab-item.active { color: var(--accent-blue); border-left: 3px solid var(--accent-blue); background: var(--bg-sidebar); }
+
+.sidebar-content { flex: 1; display: flex; flex-direction: column; }
+.search-box {
+    height: 40px; margin: 10px; background: #222; border-radius: 4px;
+    display: flex; align-items: center; padding: 0 10px; border: 1px solid #444;
+}
+.search-box input { background: transparent; border: none; color: #fff; flex: 1; margin: 0 10px; font-size: 12px; }
+
+/* Grid Items */
+.items-grid {
+    padding: 0 10px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto;
+}
+.grid-item {
+    background-color: var(--bg-item); border-radius: 4px; height: 90px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: grab; transition: 0.2s; border: 1px solid transparent;
+}
+.grid-item:hover { border-color: var(--accent-blue); background: #444850; }
+.grid-item span { font-size: 10px; margin-top: 8px; color: #ccc; text-align: center; }
+
+/* ==========================================================
+   4. DYNAMIC LAB OBJECTS (OBJECT STYLE)
+   Chuyển đổi từ ID sang CLASS để hỗ trợ nhiều vật thể
+========================================================== */
+
+/* Style chung cho mọi vật thể trên bàn thí nghiệm */
+.lab-object {
+    position: absolute;
+    z-index: 10;
+    /* Tọa độ x, y sẽ được JS set thông qua GSAP */
+}
+
+/* --- 4.1 ĐÈN CỒN (ALCOHOL LAMP) --- */
+/* --- 4.1 ĐÈN CỒN (MỚI) --- */
+.lamp-container { 
+    width: 120px; height: 160px; 
+}
+
+.lamp-body {
+    width: 120px; height: 100px;
+    position: absolute; bottom: 0; left: 0;
+    cursor: grab;
+}
+.lamp-body svg { width: 100%; height: 100%; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2)); }
+
+.lamp-wick {
+    width: 40px; height: 50px;
+    position: absolute; bottom: 85px; left: 40px;
+    z-index: 5;
+}
+
+/* Hiệu ứng khi nắp đang bay (Floating) */
+/* Sửa lại class này trong file CSS của bạn */
+.floating-lid {
+    width: 50px; 
+    height: 70px;
+    position: absolute; 
+    z-index: 1000;
+    filter: drop-shadow(5px 10px 15px rgba(0,0,0,0.3));
+    
+    /* RESET các giá trị cũ để GSAP x,y hoạt động chính xác */
+    top: 0 !important;
+    left: 0 !important;
+    bottom: auto !important;
+    right: auto !important;
+    margin: 0 !important;
+    transform: none; /* Xóa các transform cũ nếu có */
+}
+
+/* Đảm bảo vùng click của nắp đủ lớn và chính xác */
+.lamp-lid {
+    width: 50px; 
+    height: 70px;
+    position: absolute; 
+    bottom: 82px; 
+    left: 35px;
+    cursor: grab; 
+    z-index: 20;
+    background: transparent; /* Đảm bảo vùng đệm nhận click tốt */
+}
+
+.lamp-flame {
+    bottom: 125px; left: 40px; width: 40px; height: 60px;
+    position: absolute; display: none; 
+    pointer-events: none;
+    z-index: 10;
+    transform-origin: bottom center;
+}
+
+/* Làm cho chất lỏng bên trong hơi lung linh */
+.alcohol-liquid {
+    animation: liquidWave 3s infinite ease-in-out;
+}
+@keyframes liquidWave {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(1px); }
+}
+
+/* --- 4.2 HỘP DIÊM (MATCHBOX) --- */
+.matchbox-container {
+    width: 140px; height: 80px; background: #f4e4bc;
+    transform: rotate(-10deg);
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.4);
+    cursor: grab;
+    /* [THÊM DÒNG NÀY] Khẳng định rõ ràng vỏ hộp nhận click */
+    pointer-events: auto; 
+}
+.strike-strip {
+    position: absolute; right: 0; top: 0;
+    width: 30px; height: 100%; background: #5e2f2f;
+}
+.match-trigger {
+    position: absolute; top: 10px; right: -20px;
+    width: 100px; height: 20px;
+    cursor: pointer; transform: rotate(15deg);
+    transition: transform 0.1s;
+}
+.match-trigger:hover { transform: rotate(15deg) scale(1.05); }
+
+/* --- 4.3 QUE DIÊM (MATCH STICK) --- */
+.active-match {
+    position: absolute; 
+    width: 0; height: 0; /* Container không chiếm diện tích */
+    overflow: visible;   /* Để nội dung con tràn ra ngoài */
+    z-index: 1000; 
+    pointer-events: none; /* Bản thân container không nhận click */
+}
+
+/* Các bộ phận con bật lại click và có kích thước thật */
+.stick-head {
+    width: 18px; height: 14px; background: #a52a2a;
+    border-radius: 50%; position: absolute; left: 0; top: 3px;
+    
+    pointer-events: auto; /* Bật lại click */
+    cursor: grab;
+}
+.stick-body {
+    width: 90px; height: 6px; background: #deb887;
+    position: absolute; left: 15px; top: 7px;
+    
+    pointer-events: auto; /* Bật lại click */
+    cursor: grab;
+}
+
+/* Lửa cũng cho click xuyên qua để dễ thao tác với vật bên dưới */
+.match-flame {
+    position: absolute; left: -5px; top: -25px;
+    width: 25px; height: 40px; display: block;
+    transform: rotate(-90deg); opacity: 0;
+    background: radial-gradient(circle, #ffff00 0%, #ff4500 100%);
+    border-radius: 50% 50% 20% 20%; filter: blur(1px);
+    pointer-events: none; /* Click xuyên qua lửa */
+}
+
+/* --- 4.4 CỐC THỦY TINH (BEAKER - MỚI) --- */
+.beaker-container {
+    width: 100px; height: 120px; cursor: grab;
+}
+.glass-body {
+    width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    position: relative; overflow: hidden;
+    box-shadow: inset 0 0 10px rgba(255,255,255,0.1);
+}
+.liquid {
+    position: absolute; bottom: 0; left: 0; 
+    width: 100%; height: 40%; /* Mực nước mặc định */
+    background: var(--liquid-color);
+    transition: height 0.3s;
+    border-top: 1px solid rgba(255,255,255,0.5);
+}
+.measure-lines {
+    position: absolute; right: 5px; top: 10px; bottom: 10px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    font-size: 10px; color: #aaa; pointer-events: none;
+}
+
+/* --- 5. BÌNH TAM GIÁC (FLASK) --- */
+.flask-container {
+    width: 120px;
+    height: 205px; /* Tăng thêm 5px cho phần đáy võng */
+}
+
+.flask-body {
+    width: 120px;
+    height: 185px; /* Đồng bộ với viewBox SVG */
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
+
+/* Hiệu ứng khi Chlorine hiện lên sẽ mượt hơn */
+.flask-body.has-cl2 .gas-content-svg {
+    fill: #d4e157;
+    fill-opacity: 0.55;
+    transition: fill-opacity 0.8s ease-in-out;
+}
+
+/* Nắp thủy tinh */
+.glass-stopper {
+    width: 50px;
+    height: 60px;
+    position: absolute;
+    top: -15px; /* Để phần quả cầu nhô lên trên miệng bình */
+    left: 35px;
+    z-index: 20;
+}
+
+/* Nút cao su */
+.rubber-stopper {
+    width: 46px; /* Rộng hơn chút để khớp miệng 44px */
+    height: 40px;
+    position: absolute;
+    top: 3px;   /* Lún xuống cổ bình */
+    left: 37px;
+    z-index: 20;
+}
+
+/* Reset cho nắp khi kéo thả */
+.floating-stopper {
+    position: absolute;
+    z-index: 1000;
+    top: 0 !important;
+    left: 0 !important;
+}
+
+
+/* --- LỌ HÓA CHẤT (JAR) MỚI --- */
+.jar-container {
+    width: 100px;
+    height: 140px;
+}
+
+.jar-body {
+    width: 100px;
+    height: 130px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+}
+
+.jar-lid {
+    width: 50px;
+    height: 50px;
+    position: absolute;
+    top: -5px; /* Nắp hơi nhô lên khỏi miệng */
+    left: 25px; /* Căn giữa miệng lọ */
+    z-index: 20;
+    cursor: grab;
+}
+
+/* Tận dụng lại class floating để reset tọa độ khi kéo nắp */
+.stopper-style.floating-stopper, 
+.jar-lid.floating-stopper {
+    position: absolute;
+    z-index: 1000;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: auto !important;
+    right: auto !important;
+}
+
+/* Hiệu ứng khi di chuột vào nắp */
+.jar-lid:hover {
+    filter: brightness(1.2);
+}
+
+/* --- DỤNG CỤ DÀI (SPOON & WIRE) --- */
+.tool-long-container {
+    width: 50px;
+    height: 220px; /* Thu ngắn từ 250 xuống 220 */
+    cursor: grab;
+}
+.tool-svg { width: 100%; height: 100%; filter: drop-shadow(2px 4px 5px rgba(0,0,0,0.3));}
+
+/* Hiệu ứng khi dụng cụ đang được cầm kéo */
+.tool-long-container:active {
+    cursor: grabbing;
+}
+
+/* Lớp phủ để nhận diện va chạm tốt hơn khi cắm vào bình */
+.tool-long-container::after {
+    content: '';
+    position: absolute;
+    top: 50px; left: 0; width: 50px; height: 40px;
+    /* Vùng nhận diện nút cao su */
+    pointer-events: none;
+}
+
+
+.flask-neck-hitzone {
+    position: absolute;
+    width: 50px;
+    height: 80px;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    /* background: rgba(255,0,0,0.1); */ /* bật khi debug */
+}

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nobook Dynamic Lab</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/Draggable.min.js"></script>
+</head>
+<body>
+
+    <!-- Header giữ nguyên -->
+    <header id="main-header">
+        <div class="header-left">
+            <button class="btn-icon"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="divider"></div>
+            <button class="btn-tool"><i class="fa-regular fa-floppy-disk"></i> <span>Save</span></button>
+            <button class="btn-tool" onclick="labManager.clearAll()"><i class="fa-regular fa-trash-can"></i> <span>Clear</span></button>
+        </div>
+        <div class="header-center"><span>Dynamic Lab System</span></div>
+        <div class="header-right"><button class="btn-demo"><i class="fa-solid fa-tv"></i> Demo</button></div>
+    </header>
+
+    <main id="workspace">
+        <!-- CANVAS: Nơi thả vật thể vào -->
+        <div id="canvas-area">
+            <div id="simulation-container"></div> <!-- Container chứa các object -->
+        </div>
+
+        <!-- SIDEBAR: Danh sách dụng cụ -->
+        <aside id="library-sidebar">
+            <div class="sidebar-tabs">
+                <div class="tab-item active" data-type="all"><i class="fa-solid fa-flask"></i></div>
+                <div class="tab-item" data-type="glassware"><i class="fa-solid fa-vial"></i></div>
+                <div class="tab-item" data-type="tool"><i class="fa-solid fa-fire-burner"></i></div>
+            </div>
+            <div class="sidebar-content">
+                <div class="search-box"><input type="text" placeholder="Search..."></div>
+                <!-- Nơi JS sẽ render danh sách icon vào đây -->
+                <div class="items-grid" id="items-list"></div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- ==========================================
+         TEMPLATES (KHUÔN ĐÚC HTML)
+         JS sẽ copy nội dung trong này ra Canvas
+    ========================================== -->
+
+    <template id="tpl-alcohol-lamp">
+    <div class="lab-object lamp-container">
+        <!-- Ngọn lửa (Vẽ bằng SVG để mượt hơn) -->
+        <div class="flame lamp-flame">
+            <svg viewBox="0 0 40 60">
+                <path d="M20 0 C35 25 35 45 20 60 C5 45 5 25 20 0" fill="url(#flameGrad)" filter="url(#glow)"/>
+                <defs>
+                    <radialGradient id="flameGrad" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stop-color="#fff600" />
+                        <stop offset="40%" stop-color="#ff9000" />
+                        <stop offset="100%" stop-color="#ff4000" stop-opacity="0" />
+                    </radialGradient>
+                    <filter id="glow">
+                        <feGaussianBlur stdDeviation="2" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+            </svg>
+        </div>
+
+        <!-- Bấc đèn và cổ đèn -->
+        <div class="lamp-wick">
+            <svg viewBox="0 0 40 50">
+                <!-- Sợi bấc -->
+                <path d="M18 10 Q20 15 22 10 L22 45 Q20 48 18 45 Z" fill="#eee" stroke="#ccc" />
+                <!-- Cổ giữ bấc (kim loại) -->
+                <path d="M10 35 L30 35 L32 50 L8 50 Z" fill="#99abb3" />
+            </svg>
+        </div>
+
+        <!-- Thân đèn (Dạng quả lê bầu) -->
+        <div class="lamp-body">
+            <svg viewBox="0 0 120 100" preserveAspectRatio="none">
+                <!-- Chất lỏng (Cồn) -->
+                <path class="alcohol-liquid" d="M15 65 Q15 40 60 40 Q105 40 105 65 Q105 90 60 90 Q15 90 15 65 Z" fill="#b3e5fc" opacity="0.6" />
+                <!-- Vỏ thủy tinh -->
+                <path d="M60 10 C75 10 75 30 115 60 C125 75 110 95 60 95 C10 95 -5 75 5 60 C45 30 45 10 60 10 Z" 
+                      fill="rgba(200, 230, 255, 0.2)" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" />
+                <!-- Vành đáy -->
+                <ellipse cx="60" cy="93" rx="35" ry="5" fill="rgba(0,0,0,0.1)" />
+                <!-- Điểm sáng bóng gương -->
+                <path d="M30 60 Q40 50 50 60" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.3" />
+            </svg>
+        </div>
+
+        <!-- Nắp đèn (Hình trụ vòm theo ảnh) -->
+        <div class="lamp-lid">
+            <svg viewBox="0 0 50 70">
+                <!-- Vỏ nắp -->
+                <path d="M5 65 L5 25 Q5 5 25 5 Q45 5 45 25 L45 65 Q45 68 25 68 Q5 68 5 65 Z" 
+                      fill="rgba(180, 210, 230, 0.4)" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" />
+                <!-- Vành đáy nắp -->
+                <path d="M2 65 Q25 70 48 65" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+                <!-- Highlight nắp -->
+                <rect x="12" y="15" width="4" height="35" rx="2" fill="white" opacity="0.2" />
+            </svg>
+        </div>
+    </div>
+</template>
+
+    <!-- 2. Mẫu Hộp Diêm -->
+    <template id="tpl-matchbox">
+        <div class="lab-object matchbox-container">
+            <div class="strike-strip"></div>
+            <div class="match-trigger">
+                <div class="stick-head"></div>
+                <div class="stick-body"></div>
+            </div>
+        </div>
+    </template>
+
+    <!-- 1. Bình nút thủy tinh (Nắp mài dẹt - Bên trái ảnh) -->
+<!-- Mẫu Bình Tam Giác Tổng Quát (Dùng chung cho cả Glass/Rubber/Cl2) -->
+<template id="tpl-flask-glass">
+    <div class="lab-object flask-container">
+        <div class="flask-neck-hitzone"></div>
+        <!-- Nút thủy tinh giữ nguyên -->
+        <div class="flask-stopper glass-stopper">
+            <svg viewBox="0 0 50 60">
+                <circle cx="25" cy="15" r="12" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.7)" stroke-width="1"/>
+                <circle cx="25" cy="15" r="6" fill="rgba(255,255,255,0.2)"/>
+                <path d="M5 35 L45 35 L40 60 L10 60 Z" fill="rgba(255,255,255,0.5)" stroke="rgba(255,255,255,0.8)" stroke-width="1"/>
+            </svg>
+        </div>
+        
+        <div class="flask-body">
+            <svg viewBox="0 0 120 185" preserveAspectRatio="none">
+                <defs>
+                    <!-- KHUÔN ĐÚC KHÍ: Cũng phải bo tròn theo đáy bình -->
+                    <clipPath id="flask-inner-shape">
+                        <path d="M42 10 L78 10 L78 70 
+                                 L110 165 
+                                 Q112 175 60 175 
+                                 Q8 175 10 165 
+                                 L42 70 Z" />
+                    </clipPath>
+                </defs>
+
+                <!-- Lớp Khí (Chlorine) -->
+                <rect class="gas-content-svg" x="0" y="0" width="120" height="185" 
+                      clip-path="url(#flask-inner-shape)" fill="none" />
+
+                <!-- Vỏ bình thủy tinh: Bo tròn góc đáy và đáy hơi võng -->
+                <path d="M40 10 L80 10 L80 70 
+                         L115 165 
+                         Q118 180 60 180 
+                         Q2 180 5 165 
+                         L40 70 Z" 
+                      fill="rgba(255, 255, 255, 0.12)" 
+                      stroke="rgba(255,255,255,0.6)" 
+                      stroke-width="2" 
+                      stroke-linejoin="round"/>
+                
+                <!-- Miệng bình bo tròn hơn -->
+                <rect x="37" y="5" width="46" height="7" rx="3" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
+                
+                <!-- Highlight tạo độ bóng mặt kính -->
+                <path d="M48 20 L48 70 L20 160" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.08" fill="none" />
+                <!-- Bóng đáy bình -->
+                <path d="M20 170 Q60 175 100 170" stroke="rgba(255,255,255,0.2)" stroke-width="1" fill="none" />
+            </svg>
+        </div>
+    </div>
+</template>
+
+<template id="tpl-flask-rubber">
+    <div class="lab-object flask-container">
+        <div class="flask-neck-hitzone"></div>
+        <!-- Nút Cao Su - Thiết kế hình thang rộng khít cổ -->
+        <div class="flask-stopper rubber-stopper">
+            <svg viewBox="0 0 50 40">
+                <path d="M2 5 L48 5 L42 35 L8 35 Z" fill="#5D4037" stroke="#3E2723" stroke-width="1.5"/>
+                <path d="M2 10 Q25 5 48 10" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            </svg>
+        </div>
+        
+        <div class="flask-body">
+            <svg viewBox="0 0 120 185" preserveAspectRatio="none">
+                <defs>
+                    <!-- KHUÔN ĐÚC KHÍ: Cũng phải bo tròn theo đáy bình -->
+                    <clipPath id="flask-inner-shape-2">
+                        <path d="M42 10 L78 10 L78 70 
+                                 L110 165 
+                                 Q112 175 60 175 
+                                 Q8 175 10 165 
+                                 L42 70 Z" />
+                    </clipPath>
+                </defs>
+
+                <!-- Lớp Khí (Chlorine) -->
+                <rect class="gas-content-svg" x="0" y="0" width="120" height="185" 
+                      clip-path="url(#flask-inner-shape-2)" fill="none" />
+
+                <!-- Vỏ bình thủy tinh: Bo tròn góc đáy và đáy hơi võng -->
+                <path d="M40 10 L80 10 L80 70 
+                         L115 165 
+                         Q118 180 60 180 
+                         Q2 180 5 165 
+                         L40 70 Z" 
+                      fill="rgba(255, 255, 255, 0.12)" 
+                      stroke="rgba(255,255,255,0.6)" 
+                      stroke-width="2" 
+                      stroke-linejoin="round"/>
+                
+                <!-- Miệng bình bo tròn hơn -->
+                <rect x="37" y="5" width="46" height="7" rx="3" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.6)" stroke-width="1"/>
+                
+                <!-- Highlight tạo độ bóng mặt kính -->
+                <path d="M48 20 L48 70 L20 160" stroke="white" stroke-width="4" stroke-linecap="round" opacity="0.08" fill="none" />
+                <!-- Bóng đáy bình -->
+                <path d="M20 170 Q60 175 100 170" stroke="rgba(255,255,255,0.2)" stroke-width="1" fill="none" />
+            </svg>
+        </div>
+    </div>
+</template>
+
+    <!-- 6. Lọ đựng Natri -->
+    <template id="tpl-jar-na">
+    <div class="lab-object jar-container">
+        <!-- Nút lọ (Stopper) - Thiết kế màu xám đen bóng -->
+        <div class="jar-lid stopper-style">
+            <svg viewBox="0 0 50 50">
+                <!-- Phần trên nắp -->
+                <path d="M5 10 L45 10 L45 18 Q45 22 40 22 L10 22 Q5 22 5 18 Z" fill="#333" stroke="#111" stroke-width="1"/>
+                <!-- Phần nút cắm vào cổ -->
+                <path d="M12 22 L38 22 L35 45 L15 45 Z" fill="#555" stroke="#333" stroke-width="1"/>
+                <!-- Highlight nắp -->
+                <rect x="10" y="12" width="30" height="3" rx="1" fill="white" opacity="0.1"/>
+            </svg>
+        </div>
+
+        <!-- Thân lọ -->
+        <div class="jar-body">
+            <svg viewBox="0 0 100 130">
+                <defs>
+                    <!-- Khuôn để chứa các viên Natri bên trong -->
+                    <clipPath id="jar-inner-shape">
+                        <path d="M10 40 Q10 30 25 30 L75 30 Q90 30 90 40 L90 115 Q90 125 50 125 Q10 125 10 115 Z" />
+                    </clipPath>
+                </defs>
+
+                <!-- Vỏ thủy tinh (Dày, màu xám nhẹ) -->
+                <path d="M30 10 L70 10 L70 30 L90 45 L90 115 Q90 125 50 125 Q10 125 10 115 L10 45 L30 30 Z" 
+                      fill="rgba(180, 190, 200, 0.25)" 
+                      stroke="rgba(255, 255, 255, 0.4)" 
+                      stroke-width="1.5" />
+                
+                <!-- Miệng lọ dày -->
+                <rect x="28" y="5" width="44" height="8" rx="2" fill="rgba(200,210,220,0.4)" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+
+                <!-- Các viên Natri (Na) - Vẽ các khối đa giác ngẫu nhiên -->
+                <g clip-path="url(#jar-inner-shape)">
+                    <!-- Lớp nền chất lỏng bảo quản (Dầu hỏa) -->
+                    <rect x="0" y="50" width="100" height="80" fill="rgba(200, 200, 200, 0.1)" />
+                    
+                    <!-- Các viên Natri giả lập -->
+                    <path d="M15 110 L30 100 L45 115 L25 120 Z" fill="#ddd" stroke="#bbb" stroke-width="0.5"/>
+                    <path d="M40 105 L60 95 L75 110 L55 120 Z" fill="#eee" stroke="#ccc" stroke-width="0.5"/>
+                    <path d="M70 115 L85 105 L95 120 L75 125 Z" fill="#d5d5d5" stroke="#aaa" stroke-width="0.5"/>
+                    <path d="M20 95 L35 85 L50 95 L30 105 Z" fill="#e0e0e0" stroke="#bbb" stroke-width="0.5"/>
+                    <path d="M55 90 L70 80 L85 95 L65 100 Z" fill="#f0f0f0" stroke="#ddd" stroke-width="0.5"/>
+                    <!-- Thêm nhiều khối hơn nếu cần -->
+                </g>
+
+                <!-- Nhãn dán (Label Na) -->
+                <g transform="translate(20, 55)">
+                    <rect x="0" y="0" width="60" height="30" rx="8" fill="white" stroke="#4a90e2" stroke-width="2" />
+                    <text x="30" y="22" font-family="serif" font-size="18" text-anchor="middle" fill="black">Na</text>
+                </g>
+
+                <!-- Highlight mặt kính -->
+                <path d="M18 50 L18 110" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.1" />
+            </svg>
+        </div>
+    </div>
+</template>
+
+    <!-- 7. Muỗng lấy hóa chất (Combustion Spoon) -->
+<!-- 7. Muỗng lấy hóa chất (Combustion Spoon) -->
+<template id="tpl-spoon">
+    <div class="lab-object tool-long-container">
+        <svg viewBox="0 0 50 220" class="tool-svg">
+            <!-- Cán kim loại trên -->
+            <rect x="23" y="0" width="4" height="60" fill="#78909c" />
+            <!-- Nút cao su (Đã thu nhỏ khít cổ bình) -->
+            <g class="tool-stopper-part">
+                <path d="M4 60 L46 60 L40 90 L10 90 Z" fill="#5D4037" stroke="#3E2723" stroke-width="1"/>
+            </g>
+            <!-- Cán kim loại dưới -->
+            <rect x="23" y="90" width="3" height="100" fill="#78909c" />
+            <!-- Đầu muỗng (Nằm ở y=190-215, tổng 215 < 220 của viewBox) -->
+            <g class="tool-tip-part">
+                <path d="M12 205 Q12 218 25 218 Q38 218 38 205 L38 200 L12 200 Z" fill="#9e9e9e" stroke="#616161" />
+                <ellipse cx="25" cy="200" rx="13" ry="3" fill="#757575" stroke="#616161" />
+                
+                <!-- Thêm chỗ chứa natri (ban đầu ẩn) -->
+                <g class="spoon-sodium" style="display: none;">
+                    <!-- Mẩu natri nhỏ, sáng bóng -->
+                    <polygon points="18,208 25,202 32,208 28,214" fill="#e8e8e8" stroke="#bbb" stroke-width="0.8"/>
+                    <polygon points="20,206 25,202 30,206" fill="#ffffff" opacity="0.4"/>
+                    <circle cx="25" cy="207" r="2" fill="#ffffee" opacity="0.6"/>
+                </g>
+            </g>
+        </svg>
+    </div>
+</template>
+
+<!-- 8. Dây sắt (Iron Wire) -->
+<template id="tpl-iron-wire">
+    <div class="lab-object tool-long-container">
+        <svg viewBox="0 0 50 220" class="tool-svg">
+            <rect x="23" y="0" width="4" height="60" fill="#78909c" />
+            <g class="tool-stopper-part">
+                <path d="M4 60 L46 60 L40 90 L10 90 Z" fill="#5D4037" stroke="#3E2723" stroke-width="1"/>
+            </g>
+            <rect x="23" y="90" width="3" height="80" fill="#78909c" />
+            <!-- Dây xoắn (Ngắn lại để nằm trong bình) -->
+            <path d="M25 170 L25 175 
+                     Q33 175 33 180 Q17 180 17 185 
+                     Q33 185 33 190 Q17 190 17 195 
+                     Q33 195 33 200 Q17 200 17 205 Q33 205 33 210 L25 210" 
+                  fill="none" stroke="#546e7a" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+    </div>
+</template>
+
+    <script src="script.js"></script>
+</body>
+</html>
